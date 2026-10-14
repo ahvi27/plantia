@@ -90,5 +90,49 @@ document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", eve
         d.close();
 } }));
 $("#year").textContent = String(new Date().getFullYear());
+
+// Theme handling: initialize and toggle dark/light theme
+const THEME_KEY = "leaf-root-theme";
+const themeToggle = $("#theme-toggle");
+function applyTheme(mode) {
+    if (mode === "dark") {
+        document.documentElement.classList.add("dark");
+        if (themeToggle) {
+            themeToggle.setAttribute("aria-pressed", "true");
+            themeToggle.textContent = "🌙";
+        }
+    }
+    else {
+        document.documentElement.classList.remove("dark");
+        if (themeToggle) {
+            themeToggle.setAttribute("aria-pressed", "false");
+            themeToggle.textContent = "☀️";
+        }
+    }
+}
+function initTheme() {
+    try {
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved === "dark" || saved === "light") {
+            applyTheme(saved);
+        }
+        else {
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            applyTheme(prefersDark ? "dark" : "light");
+        }
+    }
+    catch { }
+    if (themeToggle) {
+        themeToggle.addEventListener("click", () => {
+            const isDark = document.documentElement.classList.contains("dark");
+            const next = isDark ? "light" : "dark";
+            applyTheme(next);
+            try { localStorage.setItem(THEME_KEY, next); }
+            catch { }
+        });
+    }
+}
+initTheme();
+
 renderProducts();
 saveCart();
