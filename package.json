@@ -1,0 +1,1 @@
+{"name":"leaf-and-root","version":"1.0.0","private":true,"scripts":{"build":"tsc","check":"tsc --noEmit","dev":"python3 -m http.server 5173"},"devDependencies":{"typescript":"^5.9.3"}}
