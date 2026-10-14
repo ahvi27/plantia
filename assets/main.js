@@ -91,23 +91,50 @@ document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", eve
 } }));
 $("#year").textContent = String(new Date().getFullYear());
 
-// Theme handling: initialize and toggle dark/light theme
+// Theme handling: support `light` | `dark` | `auto` (auto switches by clock)
 const THEME_KEY = "leaf-root-theme";
 const themeToggle = $("#theme-toggle");
+let autoWatcher = null;
+function isNightHour() {
+    const h = new Date().getHours();
+    return (h >= 19 || h < 6); // night between 19:00-05:59
+}
 function applyTheme(mode) {
-    if (mode === "dark") {
+    // mode can be 'light', 'dark' or 'auto'
+    let effective = mode === "auto" ? (isNightHour() ? "dark" : "light") : mode;
+    if (effective === "dark")
         document.documentElement.classList.add("dark");
-        if (themeToggle) {
-            themeToggle.setAttribute("aria-pressed", "true");
-            themeToggle.textContent = "🌙";
-        }
-    }
-    else {
+    else
         document.documentElement.classList.remove("dark");
-        if (themeToggle) {
-            themeToggle.setAttribute("aria-pressed", "false");
+
+    if (themeToggle) {
+        themeToggle.dataset.mode = mode;
+        themeToggle.setAttribute("aria-pressed", effective === "dark" ? "true" : "false");
+        if (mode === "auto")
+            themeToggle.textContent = "⟳";
+        else if (effective === "dark")
+            themeToggle.textContent = "🌙";
+        else
             themeToggle.textContent = "☀️";
-        }
+        themeToggle.title = `Theme: ${mode}`;
+    }
+}
+function startAutoWatcher() {
+    if (autoWatcher)
+        return;
+    // check every minute to switch at hour boundaries
+    autoWatcher = setInterval(() => {
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved === "auto")
+            applyTheme("auto");
+        else
+            stopAutoWatcher();
+    }, 60 * 1000);
+}
+function stopAutoWatcher() {
+    if (autoWatcher) {
+        clearInterval(autoWatcher);
+        autoWatcher = null;
     }
 }
 function initTheme() {
@@ -115,20 +142,40 @@ function initTheme() {
         const saved = localStorage.getItem(THEME_KEY);
         if (saved === "dark" || saved === "light") {
             applyTheme(saved);
+            stopAutoWatcher();
+        }
+        else if (saved === "auto") {
+            applyTheme("auto");
+            startAutoWatcher();
         }
         else {
             const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
             applyTheme(prefersDark ? "dark" : "light");
+            stopAutoWatcher();
         }
     }
     catch { }
+
     if (themeToggle) {
+        // clicking cycles: light -> dark -> auto -> light
         themeToggle.addEventListener("click", () => {
-            const isDark = document.documentElement.classList.contains("dark");
-            const next = isDark ? "light" : "dark";
+            const current = themeToggle.dataset.mode || localStorage.getItem(THEME_KEY) || (document.documentElement.classList.contains("dark") ? "dark" : "light");
+            let next;
+            if (current === "light")
+                next = "dark";
+            else if (current === "dark")
+                next = "auto";
+            else
+                next = "light";
+
             applyTheme(next);
             try { localStorage.setItem(THEME_KEY, next); }
             catch { }
+
+            if (next === "auto")
+                startAutoWatcher();
+            else
+                stopAutoWatcher();
         });
     }
 }
